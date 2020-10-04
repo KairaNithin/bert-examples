@@ -51,9 +51,7 @@ pooled_output, sequence_output = bert_layer([input_word_ids, input_mask, segment
 vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy()
 do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
 tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
-
-x = tf.keras.layers.GlobalAveragePooling1D()(sequence_output)
-out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(x)
+out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(pooled_output)
 
 model = tf.keras.models.Model(
     inputs=[input_word_ids, input_mask, segment_ids], outputs=out)
