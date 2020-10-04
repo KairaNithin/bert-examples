@@ -41,11 +41,9 @@ bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H
 pooled_output, sequence_output = bert_layer(bert_inputs)
 vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy()
 do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
-print(do_lower_case)
 tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
-dense = tf.keras.layers.Dense(256, activation='relu')(pooled_output)
-out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(dense)
-model = tf.keras.models.Model(inputs=bert_inputs, outputs=[out])
+out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(pooled_output)
+model = tf.keras.models.Model(inputs=bert_inputs, outputs=out)
 model.summary()
 glue, info = tfds.load('glue/mrpc', with_info=True, batch_size=-1)
 glue_train = bert_encode(glue['train'], tokenizer)
@@ -64,10 +62,8 @@ num_train_steps = steps_per_epoch * epochs
 warmup_steps = int(epochs * train_data_size * 0.1 / batch_size)
 optimizer = nlp.optimization.create_optimizer(2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
 metrics = [tf.keras.metrics.SparseCategoricalAccuracy('accuracy', dtype=tf.float32)]
-loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-model.compile(loss=loss,
-              optimizer=optimizer,
-              metrics=metrics)
+loss = tf.keras.losses.SparseCategoricalCrossentropy()
+model.compile(optimizer, loss=loss, metrics=metrics)
 
 model.fit(
     glue_train, glue_train_labels,
