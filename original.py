@@ -1,18 +1,12 @@
 import os
-
 import numpy as np
+import official.nlp.optimization
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 from official import nlp
 from official.nlp.bert import tokenization
-import official.nlp.optimization
-tfds.disable_progress_bar()
-
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-
-glue, info = tfds.load('glue/mrpc', with_info=True, batch_size=-1)
 
 
 def encode_sentence(s, tokenizer):
@@ -38,24 +32,22 @@ def bert_encode(glue_dict, tokenizer):
     return inputs
 
 
-max_seq_length = 128  # Your choice here.
-input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32,
-                                       name="input_word_ids")
-input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32,
-                                   name="input_mask")
-segment_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32,
-                                    name="segment_ids")
+max_seq_length = 128
+input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name="input_word_ids")
+input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name="input_mask")
+segment_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name="segment_ids")
 bert_inputs = [input_word_ids, input_mask, segment_ids]
 bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2", trainable=True)
-pooled_output, sequence_output = bert_layer([input_word_ids, input_mask, segment_ids])
+pooled_output, sequence_output = bert_layer(bert_inputs)
 vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy()
 do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
+print(do_lower_case)
 tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
-out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(pooled_output)
-
-model = tf.keras.models.Model(
-    inputs=[input_word_ids, input_mask, segment_ids], outputs=[out])
-
+dense = tf.keras.layers.Dense(256, activation='relu')(pooled_output)
+out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(dense)
+model = tf.keras.models.Model(inputs=bert_inputs, outputs=[out])
+model.summary()
+glue, info = tfds.load('glue/mrpc', with_info=True, batch_size=-1)
 glue_train = bert_encode(glue['train'], tokenizer)
 glue_train_labels = glue['train']['label']
 glue_validation = bert_encode(glue['validation'], tokenizer)
@@ -70,8 +62,7 @@ train_data_size = len(glue_train_labels)
 steps_per_epoch = int(train_data_size / batch_size)
 num_train_steps = steps_per_epoch * epochs
 warmup_steps = int(epochs * train_data_size * 0.1 / batch_size)
-optimizer = nlp.optimization.create_optimizer(
-    2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
+optimizer = nlp.optimization.create_optimizer(2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
 metrics = [tf.keras.metrics.SparseCategoricalAccuracy('accuracy', dtype=tf.float32)]
 loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 model.compile(loss=loss,
