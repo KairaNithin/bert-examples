@@ -63,7 +63,7 @@ glue_validation_labels = glue['validation']['label']
 glue_test = bert_encode(glue['test'], tokenizer)
 glue_test_labels = glue['test']['label']
 
-epochs = 3
+epochs = 10
 batch_size = 32
 eval_batch_size = 32
 train_data_size = len(glue_train_labels)
