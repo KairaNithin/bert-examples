@@ -6,7 +6,7 @@ import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 from official import nlp
 from official.nlp.bert import tokenization
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 def encode_sentence(s, tokenizer):
@@ -53,17 +53,18 @@ glue_validation_labels = glue['validation']['label']
 glue_test = bert_encode(glue['test'], tokenizer)
 glue_test_labels = glue['test']['label']
 
-epochs = 10
+epochs = 20
 batch_size = 32
 eval_batch_size = 32
 train_data_size = len(glue_train_labels)
 steps_per_epoch = int(train_data_size / batch_size)
 num_train_steps = steps_per_epoch * epochs
 warmup_steps = int(epochs * train_data_size * 0.1 / batch_size)
-optimizer = nlp.optimization.create_optimizer(2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
+# optimizer = nlp.optimization.create_optimizer(2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
+
 metrics = [tf.keras.metrics.SparseCategoricalAccuracy('accuracy', dtype=tf.float32)]
 loss = tf.keras.losses.SparseCategoricalCrossentropy()
-model.compile(optimizer, loss=loss, metrics=metrics)
+model.compile(optimizer=tf.optimizers.Adam(lr=2e-5), loss=loss, metrics=metrics)
 
 model.fit(
     glue_train, glue_train_labels,
