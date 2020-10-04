@@ -53,7 +53,7 @@ do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
 tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
 
 x = tf.keras.layers.GlobalAveragePooling1D()(sequence_output)
-out = tf.keras.layers.Dense(6, activation="sigmoid", name="dense_output")(x)
+out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(x)
 
 model = tf.keras.models.Model(
     inputs=[input_word_ids, input_mask, segment_ids], outputs=out)
@@ -83,7 +83,8 @@ model.compile(loss=loss,
 model.fit(
     glue_train, glue_train_labels,
     validation_data=(glue_validation, glue_validation_labels),
-    batch_size=32,
+    batch_size=batch_size,
+    validation_batch_size=eval_batch_size,
     epochs=epochs)
 my_examples = bert_encode(
     glue_dict={
