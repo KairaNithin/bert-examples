@@ -54,7 +54,7 @@ tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
 out = tf.keras.layers.Dense(units=2, activation="softmax", name="dense_output")(pooled_output)
 
 model = tf.keras.models.Model(
-    inputs=[input_word_ids, input_mask, segment_ids], outputs=out)
+    inputs=[input_word_ids, input_mask, segment_ids], outputs=[out])
 
 glue_train = bert_encode(glue['train'], tokenizer)
 glue_train_labels = glue['train']['label']
