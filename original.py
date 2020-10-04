@@ -63,11 +63,9 @@ steps_per_epoch = int(train_data_size / batch_size)
 num_train_steps = steps_per_epoch * epochs
 warmup_steps = int(epochs * train_data_size * 0.1 / batch_size)
 optimizer = nlp.optimization.create_optimizer(2e-5, num_train_steps=num_train_steps, num_warmup_steps=warmup_steps)
-
 metrics = [tf.keras.metrics.SparseCategoricalAccuracy('accuracy', dtype=tf.float32)]
 loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-
 model.fit(
     glue_train, glue_train_labels,
     validation_data=(glue_validation, glue_validation_labels),
