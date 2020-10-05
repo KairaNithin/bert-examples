@@ -37,17 +37,16 @@ max_seq_length = 128
 input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name="input_word_ids")
 input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name="input_mask")
 input_type_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_type_ids')
+bert_inputs = {'input_word_ids': input_word_ids, 'input_mask': input_mask, 'input_type_ids': input_type_ids}
 bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2", trainable=True)
 pooled_output, _ = bert_layer([input_word_ids, input_mask, input_type_ids])
 vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy()
 do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
 tokenizer = tokenization.FullTokenizer(vocab_file, do_lower_case)
-output = tf.keras.layers.Dropout(rate=0.1)(pooled_output)
-output = tf.keras.layers.Dense(2, kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.02), name='output')(
-    output)
-model = tf.keras.models.Model(
-    inputs={'input_word_ids': input_word_ids, 'input_mask': input_mask, 'input_type_ids': input_type_ids},
-    outputs=output)
+output = tf.keras.layers.Dropout(rate=0.2)(pooled_output)
+initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
+bert_output = tf.keras.layers.Dense(2, kernel_initializer=initializer, name='output')(output)
+model = tf.keras.models.Model(inputs=bert_inputs, outputs=bert_output)
 model.summary()
 glue, info = tfds.load('glue/mrpc', with_info=True, batch_size=-1)
 glue_train = bert_encode(glue['train'], tokenizer)
@@ -55,7 +54,7 @@ glue_train_labels = glue['train']['label']
 glue_validation = bert_encode(glue['validation'], tokenizer)
 glue_validation_labels = glue['validation']['label']
 
-epochs = 3
+epochs = 10
 batch_size = 32
 eval_batch_size = 32
 train_data_size = len(glue_train_labels)
