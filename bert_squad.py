@@ -246,5 +246,5 @@ model.fit(
     x_train,
     y_train,
     epochs=3,  # For demonstration, 3 epochs are recommended
-    batch_size=4,
+    batch_size=4 ,
     callbacks=[exact_match_callback])
