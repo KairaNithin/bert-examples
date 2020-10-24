@@ -52,8 +52,8 @@ class Sample:
             if len(ans_token_idx) == 0:
                 self.skip = True
                 return
-            start_token_idx = ans_token_idx[0]
-            end_token_idx = ans_token_idx[-1]
+            self.start_token_idx = ans_token_idx[0]
+            self.end_token_idx = ans_token_idx[-1]
         input_ids = tokenized_context.ids + tokenized_question.ids[1:]
         token_type_ids = [0] * len(tokenized_context.ids) + [1] * len(tokenized_question.ids[1:])
         attention_mask = [1] * len(input_ids)
@@ -68,9 +68,6 @@ class Sample:
         self.input_word_ids = input_ids
         self.input_type_ids = token_type_ids
         self.input_mask = attention_mask
-        if self.answer_text is not None:
-            self.start_token_idx = start_token_idx
-            self.end_token_idx = end_token_idx
         self.context_token_to_char = tokenized_context.offsets
 
 
@@ -144,7 +141,7 @@ model.compile(optimizer=optimizer, loss=[loss, loss])
 
 class ValidationCallback(keras.callbacks.Callback):
 
-    def normalize_text(text):
+    def normalize_text(self, text):
         text = text.lower()
         text = "".join(ch for ch in text if ch not in set(string.punctuation))
         regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
@@ -173,8 +170,8 @@ class ValidationCallback(keras.callbacks.Callback):
                 pred_ans = squad_eg.context[pred_char_start:pred_char_end]
             else:
                 pred_ans = squad_eg.context[pred_char_start:]
-            normalized_pred_ans = normalize_text(pred_ans)
-            normalized_true_ans = [normalize_text(_) for _ in squad_eg.all_answers]
+            normalized_pred_ans = self.normalize_text(pred_ans)
+            normalized_true_ans = [self.normalize_text(_) for _ in squad_eg.all_answers]
             if normalized_pred_ans in normalized_true_ans:
                 count += 1
         acc = count / len(self.y_eval[0])
