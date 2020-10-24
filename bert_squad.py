@@ -9,97 +9,71 @@ import tensorflow_hub as hub
 from tensorflow import keras
 from tensorflow.keras import layers
 from tokenizers import BertWordPieceTokenizer
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
+# ============================================= PREPARING DATASET ======================================================
 train_data_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json"
 train_path = keras.utils.get_file("train.json", train_data_url)
 eval_data_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json"
 eval_path = keras.utils.get_file("eval.json", eval_data_url)
+with open(train_path) as f: raw_train_data = json.load(f)
+with open(eval_path) as f: raw_eval_data = json.load(f)
 max_seq_length = 384
 
 
-class SquadExample:
-    def __init__(self, question, context, start_char_idx, answer_text, all_answers):
+class Sample:
+    def __init__(self, question, context, start_char_idx=None, answer_text=None, all_answers=None):
         self.question = question
         self.context = context
         self.start_char_idx = start_char_idx
         self.answer_text = answer_text
         self.all_answers = all_answers
         self.skip = False
+        self.start_token_idx = -1
+        self.end_token_idx = -1
 
     def preprocess(self):
-        context = self.context
-        question = self.question
-        answer_text = self.answer_text
-        start_char_idx = self.start_char_idx
-
-        # Clean context, answer and question
-        context = " ".join(str(context).split())
-        question = " ".join(str(question).split())
-        answer = " ".join(str(answer_text).split())
-
-        # Find end character index of answer in context
-        end_char_idx = start_char_idx + len(answer)
-        if end_char_idx >= len(context):
-            self.skip = True
-            return
-
-        # Mark the character indexes in context that are in answer
-        is_char_in_ans = [0] * len(context)
-        for idx in range(start_char_idx, end_char_idx):
-            is_char_in_ans[idx] = 1
-
-        # Tokenize context
+        context = " ".join(str(self.context).split())
+        question = " ".join(str(self.question).split())
         tokenized_context = tokenizer.encode(context)
-
-        # Find tokens that were created from answer characters
-        ans_token_idx = []
-        for idx, (start, end) in enumerate(tokenized_context.offsets):
-            if sum(is_char_in_ans[start:end]) > 0:
-                ans_token_idx.append(idx)
-
-        if len(ans_token_idx) == 0:
-            self.skip = True
-            return
-
-        # Find start and end token index for tokens from answer
-        start_token_idx = ans_token_idx[0]
-        end_token_idx = ans_token_idx[-1]
-
-        # Tokenize question
         tokenized_question = tokenizer.encode(question)
-
-        # Create inputs
+        if self.answer_text is not None:
+            answer = " ".join(str(self.answer_text).split())
+            end_char_idx = self.start_char_idx + len(answer)
+            if end_char_idx >= len(context):
+                self.skip = True
+                return
+            is_char_in_ans = [0] * len(context)
+            for idx in range(self.start_char_idx, end_char_idx):
+                is_char_in_ans[idx] = 1
+            ans_token_idx = []
+            for idx, (start, end) in enumerate(tokenized_context.offsets):
+                if sum(is_char_in_ans[start:end]) > 0:
+                    ans_token_idx.append(idx)
+            if len(ans_token_idx) == 0:
+                self.skip = True
+                return
+            start_token_idx = ans_token_idx[0]
+            end_token_idx = ans_token_idx[-1]
         input_ids = tokenized_context.ids + tokenized_question.ids[1:]
-        token_type_ids = [0] * len(tokenized_context.ids) + [1] * len(
-            tokenized_question.ids[1:]
-        )
+        token_type_ids = [0] * len(tokenized_context.ids) + [1] * len(tokenized_question.ids[1:])
         attention_mask = [1] * len(input_ids)
-
-        # Pad and create attention masks.
-        # Skip if truncation is needed
         padding_length = max_seq_length - len(input_ids)
-        if padding_length > 0:  # pad
+        if padding_length > 0:
             input_ids = input_ids + ([0] * padding_length)
             attention_mask = attention_mask + ([0] * padding_length)
             token_type_ids = token_type_ids + ([0] * padding_length)
-        elif padding_length < 0:  # skip
+        elif padding_length < 0:
             self.skip = True
             return
-
-        self.input_ids = input_ids
-        self.token_type_ids = token_type_ids
-        self.attention_mask = attention_mask
-        self.start_token_idx = start_token_idx
-        self.end_token_idx = end_token_idx
+        self.input_word_ids = input_ids
+        self.input_type_ids = token_type_ids
+        self.input_mask = attention_mask
+        if self.answer_text is not None:
+            self.start_token_idx = start_token_idx
+            self.end_token_idx = end_token_idx
         self.context_token_to_char = tokenized_context.offsets
-
-
-with open(train_path) as f:
-    raw_train_data = json.load(f)
-
-with open(eval_path) as f:
-    raw_eval_data = json.load(f)
 
 
 def create_squad_examples(raw_data):
@@ -109,12 +83,13 @@ def create_squad_examples(raw_data):
             context = para["context"]
             for qa in para["qas"]:
                 question = qa["question"]
-                answer_text = qa["answers"][0]["text"]
-                all_answers = [_["text"] for _ in qa["answers"]]
-                start_char_idx = qa["answers"][0]["answer_start"]
-                squad_eg = SquadExample(
-                    question, context, start_char_idx, answer_text, all_answers
-                )
+                if "answers" in qa:
+                    answer_text = qa["answers"][0]["text"]
+                    all_answers = [_["text"] for _ in qa["answers"]]
+                    start_char_idx = qa["answers"][0]["answer_start"]
+                    squad_eg = Sample(question, context, start_char_idx, answer_text, all_answers)
+                else:
+                    squad_eg = Sample(question, context)
                 squad_eg.preprocess()
                 squad_examples.append(squad_eg)
     return squad_examples
@@ -122,9 +97,9 @@ def create_squad_examples(raw_data):
 
 def create_inputs_targets(squad_examples):
     dataset_dict = {
-        "input_ids": [],
-        "token_type_ids": [],
-        "attention_mask": [],
+        "input_word_ids": [],
+        "input_type_ids": [],
+        "input_mask": [],
         "start_token_idx": [],
         "end_token_idx": [],
     }
@@ -134,50 +109,36 @@ def create_inputs_targets(squad_examples):
                 dataset_dict[key].append(getattr(item, key))
     for key in dataset_dict:
         dataset_dict[key] = np.array(dataset_dict[key])
-
-    x = [
-        dataset_dict["input_ids"],
-        dataset_dict["token_type_ids"],
-        dataset_dict["attention_mask"],
-    ]
+    x = [dataset_dict["input_word_ids"],
+         dataset_dict["input_mask"],
+         dataset_dict["input_type_ids"]]
     y = [dataset_dict["start_token_idx"], dataset_dict["end_token_idx"]]
     return x, y
 
 
-input_word_ids = tf.keras.layers.Input(
-    shape=(max_seq_length,), dtype=tf.int32, name='input_word_ids')
-input_mask = tf.keras.layers.Input(
-    shape=(max_seq_length,), dtype=tf.int32, name='input_mask')
-input_type_ids = tf.keras.layers.Input(
-    shape=(max_seq_length,), dtype=tf.int32, name='input_type_ids')
+# =================================================== TRAINING =========================================================
+
+input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_word_ids')
+input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_mask')
+input_type_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_type_ids')
 bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2", trainable=True)
 pooled_output, sequence_output = bert_layer([input_word_ids, input_mask, input_type_ids])
 vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy().decode("utf-8")
-print(type(vocab_file))
 do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
-tokenizer = BertWordPieceTokenizer(vocab_file=vocab_file, lowercase=True)
-
+tokenizer = BertWordPieceTokenizer(vocab=vocab_file, lowercase=True)
 train_squad_examples = create_squad_examples(raw_train_data)
 x_train, y_train = create_inputs_targets(train_squad_examples)
 print(f"{len(train_squad_examples)} training points created.")
-
 eval_squad_examples = create_squad_examples(raw_eval_data)
 x_eval, y_eval = create_inputs_targets(eval_squad_examples)
 print(f"{len(eval_squad_examples)} evaluation points created.")
-
 start_logits = layers.Dense(1, name="start_logit", use_bias=False)(sequence_output)
 start_logits = layers.Flatten()(start_logits)
-
 end_logits = layers.Dense(1, name="end_logit", use_bias=False)(sequence_output)
 end_logits = layers.Flatten()(end_logits)
-
 start_probs = layers.Activation(keras.activations.softmax)(start_logits)
 end_probs = layers.Activation(keras.activations.softmax)(end_logits)
-
-model = keras.Model(
-    inputs=[input_word_ids, input_mask, input_type_ids],
-    outputs=[start_probs, end_probs],
-)
+model = keras.Model(inputs=[input_word_ids, input_mask, input_type_ids], outputs=[start_probs, end_probs])
 loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
 optimizer = keras.optimizers.Adam(lr=5e-5)
 model.compile(optimizer=optimizer, loss=[loss, loss])
@@ -185,29 +146,15 @@ model.compile(optimizer=optimizer, loss=[loss, loss])
 
 def normalize_text(text):
     text = text.lower()
-
-    # Remove punctuations
     exclude = set(string.punctuation)
     text = "".join(ch for ch in text if ch not in exclude)
-
-    # Remove articles
     regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
     text = re.sub(regex, " ", text)
-
-    # Remove extra white space
     text = " ".join(text.split())
     return text
 
 
-class ExactMatch(keras.callbacks.Callback):
-    """
-    Each `SquadExample` object contains the character level offsets for each token
-    in its input paragraph. We use them to get back the span of text corresponding
-    to the tokens between our predicted start and end tokens.
-    All the ground-truth answers are also present in each `SquadExample` object.
-    We calculate the percentage of data points where the span of text obtained
-    from model predictions matches one of the ground-truth answers.
-    """
+class ValidationCallback(keras.callbacks.Callback):
 
     def __init__(self, x_eval, y_eval):
         self.x_eval = x_eval
@@ -230,21 +177,82 @@ class ExactMatch(keras.callbacks.Callback):
                 pred_ans = squad_eg.context[pred_char_start:pred_char_end]
             else:
                 pred_ans = squad_eg.context[pred_char_start:]
-
             normalized_pred_ans = normalize_text(pred_ans)
             normalized_true_ans = [normalize_text(_) for _ in squad_eg.all_answers]
             if normalized_pred_ans in normalized_true_ans:
                 count += 1
         acc = count / len(self.y_eval[0])
-        print(f"\nepoch={epoch+1}, exact match score={acc:.2f}")
+        print(f"\nepoch={epoch + 1}, exact match score={acc:.2f}")
 
 
-exact_match_callback = ExactMatch(x_eval, y_eval)
+model.fit(x_train, y_train, epochs=3, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
+model.save_weights("./weights.h5")
+#model.load_weights("./weights.h5")
 
+# ==================================================== TESTING =========================================================
+data = {"data":
+    [
+        {"title": "Project Apollo",
+         "paragraphs": [
+             {
+                 "context": "The Apollo program, also known as Project Apollo, was the third United States human "
+                            "spaceflight program carried out by the National Aeronautics and Space Administration ("
+                            "NASA), which accomplished landing the first humans on the Moon from 1969 to 1972. First "
+                            "conceived during Dwight D. Eisenhower's administration as a three-man spacecraft to "
+                            "follow the one-man Project Mercury which put the first Americans in space, Apollo was "
+                            "later dedicated to President John F. Kennedy's national goal of landing a man on the "
+                            "Moon and returning him safely to the Earth by the end of the 1960s, which he proposed in "
+                            "a May 25, 1961, address to Congress. Project Mercury was followed by the two-man Project "
+                            "Gemini. The first manned flight of Apollo was in 1968. Apollo ran from 1961 to 1972, "
+                            "and was supported by the two man Gemini program which ran concurrently with it from 1962 "
+                            "to 1966. Gemini missions developed some of the space travel techniques that were "
+                            "necessary for the success of the Apollo missions. Apollo used Saturn family rockets as "
+                            "launch vehicles. Apollo/Saturn vehicles were also used for an Apollo Applications "
+                            "Program, which consisted of Skylab, a space station that supported three manned missions "
+                            "in 1973-74, and the Apollo-Soyuz Test Project, a joint Earth orbit mission with the "
+                            "Soviet Union in 1975.",
+                 "qas": [
+                     {"question": "What project put the first Americans into space?",
+                      "id": "Q1"
+                      },
+                     {"question": "What program was created to carry out these projects and missions?",
+                      "id": "Q2"
+                      },
+                     {"question": "What year did the first manned Apollo flight occur?",
+                      "id": "Q3"
+                      },
+                     {"question": "What President is credited with the original notion of putting Americans in space?",
+                      "id": "Q4"
+                      },
+                     {"question": "Who did the U.S. collaborate with on an Earth orbit mission in 1975?",
+                      "id": "Q5"
+                      },
+                     {"question": "How long did Project Apollo run?",
+                      "id": "Q6"
+                      },
+                     {"question": "What program helped develop space travel techniques that Project Apollo used?",
+                      "id": "Q7"
+                      },
+                     {"question": "What space station supported three manned missions in 1973-1974?",
+                      "id": "Q8"
+                      }
+                 ]}]}]}
 
-model.fit(
-    x_train,
-    y_train,
-    epochs=3,  # For demonstration, 3 epochs are recommended
-    batch_size=4 ,
-    callbacks=[exact_match_callback])
+test_context = create_squad_examples(data)
+squad_test = test_context[0]
+x_test, _ = create_inputs_targets(test_context)
+pred_start, pred_end = model.predict(x_test)
+for idx, (start, end) in enumerate(zip(pred_start, pred_end)):
+    offsets = squad_test.context_token_to_char
+    start = np.argmax(start)
+    end = np.argmax(end)
+    pred_ans = None
+    if start >= len(offsets):
+        continue
+    pred_char_start = offsets[start][0]
+    if end < len(offsets):
+        pred_ans = squad_test.context[pred_char_start:offsets[end][1]]
+    else:
+        pred_ans = squad_test.context[pred_char_start:]
+    print("Q: " + test_context[idx].question)
+    print("A: " + pred_ans)
