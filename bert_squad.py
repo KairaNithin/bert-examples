@@ -13,10 +13,8 @@ from tokenizers import BertWordPieceTokenizer
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 # ============================================= PREPARING DATASET ======================================================
-train_data_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json"
-train_path = keras.utils.get_file("train.json", train_data_url)
-eval_data_url = "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json"
-eval_path = keras.utils.get_file("eval.json", eval_data_url)
+train_path = keras.utils.get_file("train.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json")
+eval_path = keras.utils.get_file("eval.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json")
 with open(train_path) as f: raw_train_data = json.load(f)
 with open(eval_path) as f: raw_eval_data = json.load(f)
 max_seq_length = 384
@@ -144,17 +142,15 @@ optimizer = keras.optimizers.Adam(lr=5e-5)
 model.compile(optimizer=optimizer, loss=[loss, loss])
 
 
-def normalize_text(text):
-    text = text.lower()
-    exclude = set(string.punctuation)
-    text = "".join(ch for ch in text if ch not in exclude)
-    regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
-    text = re.sub(regex, " ", text)
-    text = " ".join(text.split())
-    return text
-
-
 class ValidationCallback(keras.callbacks.Callback):
+
+    def normalize_text(text):
+        text = text.lower()
+        text = "".join(ch for ch in text if ch not in set(string.punctuation))
+        regex = re.compile(r"\b(a|an|the)\b", re.UNICODE)
+        text = re.sub(regex, " ", text)
+        text = " ".join(text.split())
+        return text
 
     def __init__(self, x_eval, y_eval):
         self.x_eval = x_eval
@@ -185,9 +181,9 @@ class ValidationCallback(keras.callbacks.Callback):
         print(f"\nepoch={epoch + 1}, exact match score={acc:.2f}")
 
 
-model.fit(x_train, y_train, epochs=3, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
-model.save_weights("./weights.h5")
-#model.load_weights("./weights.h5")
+# model.fit(x_train, y_train, epochs=10, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
+# model.save_weights("./weights.h5")
+model.load_weights("./weights.h5")
 
 # ==================================================== TESTING =========================================================
 data = {"data":
@@ -238,12 +234,12 @@ data = {"data":
                       }
                  ]}]}]}
 
-test_context = create_squad_examples(data)
-squad_test = test_context[0]
-x_test, _ = create_inputs_targets(test_context)
+test_samples = create_squad_examples(data)
+x_test, _ = create_inputs_targets(test_samples)
 pred_start, pred_end = model.predict(x_test)
 for idx, (start, end) in enumerate(zip(pred_start, pred_end)):
-    offsets = squad_test.context_token_to_char
+    test_sample = test_samples[idx]
+    offsets = test_sample.context_token_to_char
     start = np.argmax(start)
     end = np.argmax(end)
     pred_ans = None
@@ -251,8 +247,8 @@ for idx, (start, end) in enumerate(zip(pred_start, pred_end)):
         continue
     pred_char_start = offsets[start][0]
     if end < len(offsets):
-        pred_ans = squad_test.context[pred_char_start:offsets[end][1]]
+        pred_ans = test_sample.context[pred_char_start:offsets[end][1]]
     else:
-        pred_ans = squad_test.context[pred_char_start:]
-    print("Q: " + test_context[idx].question)
+        pred_ans = test_sample.context[pred_char_start:]
+    print("Q: " + test_sample.question)
     print("A: " + pred_ans)
