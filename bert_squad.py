@@ -135,7 +135,7 @@ start_probs = layers.Activation(keras.activations.softmax)(start_logits)
 end_probs = layers.Activation(keras.activations.softmax)(end_logits)
 model = keras.Model(inputs=[input_word_ids, input_mask, input_type_ids], outputs=[start_probs, end_probs])
 loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-optimizer = keras.optimizers.Adam(lr=5e-5)
+optimizer = keras.optimizers.Adam(lr=1e-5, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 model.compile(optimizer=optimizer, loss=[loss, loss])
 
 
@@ -178,10 +178,8 @@ class ValidationCallback(keras.callbacks.Callback):
         print(f"\nepoch={epoch + 1}, exact match score={acc:.2f}")
 
 
-# model.fit(x_train, y_train, epochs=10, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
-# model.save_weights("./weights.h5")
-model.load_weights("./weights.h5")
-
+model.fit(x_train, y_train, epochs=6, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
+model.save_weights("./weights.h5")
 # ==================================================== TESTING =========================================================
 data = {"data":
     [
