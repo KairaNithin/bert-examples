@@ -178,7 +178,7 @@ class ValidationCallback(keras.callbacks.Callback):
         print(f"\nepoch={epoch + 1}, exact match score={acc:.2f}")
 
 
-model.fit(x_train, y_train, epochs=6, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
+model.fit(x_train, y_train, epochs=2, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
 model.save_weights("./weights.h5")
 # ==================================================== TESTING =========================================================
 data = {"data":
