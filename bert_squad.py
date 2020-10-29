@@ -2,24 +2,16 @@ import json
 import os
 import re
 import string
-
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 from tensorflow import keras
 from tensorflow.keras import layers
 from tokenizers import BertWordPieceTokenizer
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
+
 # ============================================= PREPARING DATASET ======================================================
-train_path = keras.utils.get_file("train.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json")
-eval_path = keras.utils.get_file("eval.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json")
-with open(train_path) as f: raw_train_data = json.load(f)
-with open(eval_path) as f: raw_eval_data = json.load(f)
-max_seq_length = 384
-
-
 class Sample:
     def __init__(self, question, context, start_char_idx=None, answer_text=None, all_answers=None):
         self.question = question
@@ -109,34 +101,7 @@ def create_inputs_targets(squad_examples):
          dataset_dict["input_type_ids"]]
     y = [dataset_dict["start_token_idx"], dataset_dict["end_token_idx"]]
     return x, y
-
-
 # =================================================== TRAINING =========================================================
-
-input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_word_ids')
-input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_mask')
-input_type_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_type_ids')
-bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2", trainable=True)
-pooled_output, sequence_output = bert_layer([input_word_ids, input_mask, input_type_ids])
-vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy().decode("utf-8")
-do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
-tokenizer = BertWordPieceTokenizer(vocab=vocab_file, lowercase=True)
-train_squad_examples = create_squad_examples(raw_train_data)
-x_train, y_train = create_inputs_targets(train_squad_examples)
-print(f"{len(train_squad_examples)} training points created.")
-eval_squad_examples = create_squad_examples(raw_eval_data)
-x_eval, y_eval = create_inputs_targets(eval_squad_examples)
-print(f"{len(eval_squad_examples)} evaluation points created.")
-start_logits = layers.Dense(1, name="start_logit", use_bias=False)(sequence_output)
-start_logits = layers.Flatten()(start_logits)
-end_logits = layers.Dense(1, name="end_logit", use_bias=False)(sequence_output)
-end_logits = layers.Flatten()(end_logits)
-start_probs = layers.Activation(keras.activations.softmax)(start_logits)
-end_probs = layers.Activation(keras.activations.softmax)(end_logits)
-model = keras.Model(inputs=[input_word_ids, input_mask, input_type_ids], outputs=[start_probs, end_probs])
-loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-optimizer = keras.optimizers.Adam(lr=1e-5, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-model.compile(optimizer=optimizer, loss=[loss, loss])
 
 
 class ValidationCallback(keras.callbacks.Callback):
@@ -178,6 +143,36 @@ class ValidationCallback(keras.callbacks.Callback):
         print(f"\nepoch={epoch + 1}, exact match score={acc:.2f}")
 
 
+train_path = keras.utils.get_file("train.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json")
+eval_path = keras.utils.get_file("eval.json", "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json")
+with open(train_path) as f: raw_train_data = json.load(f)
+with open(eval_path) as f: raw_eval_data = json.load(f)
+max_seq_length = 384
+
+input_word_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_word_ids')
+input_mask = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_mask')
+input_type_ids = tf.keras.layers.Input(shape=(max_seq_length,), dtype=tf.int32, name='input_type_ids')
+bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2", trainable=True)
+pooled_output, sequence_output = bert_layer([input_word_ids, input_mask, input_type_ids])
+vocab_file = bert_layer.resolved_object.vocab_file.asset_path.numpy().decode("utf-8")
+do_lower_case = bert_layer.resolved_object.do_lower_case.numpy()
+tokenizer = BertWordPieceTokenizer(vocab=vocab_file, lowercase=True)
+train_squad_examples = create_squad_examples(raw_train_data)
+x_train, y_train = create_inputs_targets(train_squad_examples)
+print(f"{len(train_squad_examples)} training points created.")
+eval_squad_examples = create_squad_examples(raw_eval_data)
+x_eval, y_eval = create_inputs_targets(eval_squad_examples)
+print(f"{len(eval_squad_examples)} evaluation points created.")
+start_logits = layers.Dense(1, name="start_logit", use_bias=False)(sequence_output)
+start_logits = layers.Flatten()(start_logits)
+end_logits = layers.Dense(1, name="end_logit", use_bias=False)(sequence_output)
+end_logits = layers.Flatten()(end_logits)
+start_probs = layers.Activation(keras.activations.softmax)(start_logits)
+end_probs = layers.Activation(keras.activations.softmax)(end_logits)
+model = keras.Model(inputs=[input_word_ids, input_mask, input_type_ids], outputs=[start_probs, end_probs])
+loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+optimizer = keras.optimizers.Adam(lr=1e-5, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+model.compile(optimizer=optimizer, loss=[loss, loss])
 model.fit(x_train, y_train, epochs=2, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
 model.save_weights("./weights.h5")
 # ==================================================== TESTING =========================================================

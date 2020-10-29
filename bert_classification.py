@@ -48,6 +48,7 @@ initializer = tf.keras.initializers.TruncatedNormal(stddev=0.02)
 bert_output = tf.keras.layers.Dense(2, kernel_initializer=initializer, name='output')(output)
 model = tf.keras.models.Model(inputs=bert_inputs, outputs=bert_output)
 model.summary()
+
 glue, info = tfds.load('glue/mrpc', with_info=True, batch_size=-1)
 glue_train = bert_encode(glue['train'], tokenizer)
 glue_train_labels = glue['train']['label']
@@ -71,6 +72,7 @@ model.fit(
     batch_size=batch_size,
     validation_batch_size=eval_batch_size,
     epochs=epochs)
+model.save_weights("./weights.h5")
 my_examples = bert_encode(
     glue_dict={
         'sentence1': [
