@@ -6,8 +6,8 @@ import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 from official import nlp
 from official.nlp.bert import tokenization
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 
 def encode_sentence(s, tokenizer):

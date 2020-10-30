@@ -173,6 +173,7 @@ model = keras.Model(inputs=[input_word_ids, input_mask, input_type_ids], outputs
 loss = keras.losses.SparseCategoricalCrossentropy(from_logits=False)
 optimizer = keras.optimizers.Adam(lr=1e-5, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 model.compile(optimizer=optimizer, loss=[loss, loss])
+model.summary()
 model.fit(x_train, y_train, epochs=2, batch_size=8, callbacks=[ValidationCallback(x_eval, y_eval)])
 model.save_weights("./weights.h5")
 # ==================================================== TESTING =========================================================
