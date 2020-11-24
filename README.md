@@ -5,8 +5,8 @@
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/classification_result.png" width="900"/>  
 
 ## Question Answering (SQuAD1.1)
-[TensorFlow](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_tensorflow.py)  
-[PyTorch](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_pytorch.py)  
+### [TensorFlow](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_tensorflow.py)  
+### [PyTorch](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_pytorch.py)  
 ### Training and validation results
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/squad_results.png" width="900"/>  
 
