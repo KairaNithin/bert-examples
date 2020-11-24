@@ -33,6 +33,8 @@ if not os.path.exists("bert_base_uncased/"):
     os.makedirs("bert_base_uncased/")
 slow_tokenizer.save_pretrained("bert_base_uncased/")
 tokenizer = BertWordPieceTokenizer("bert_base_uncased/vocab.txt", lowercase=True)
+
+
 # ============================================= PREPARING DATASET ======================================================
 
 
@@ -120,9 +122,7 @@ def create_inputs_targets(squad_examples):
                 dataset_dict[key].append(getattr(item, key))
     for key in dataset_dict:
         dataset_dict[key] = np.array(dataset_dict[key])
-    x = [dataset_dict["input_word_ids"],
-         dataset_dict["input_mask"],
-         dataset_dict["input_type_ids"]]
+    x = [dataset_dict["input_word_ids"], dataset_dict["input_mask"], dataset_dict["input_type_ids"]]
     y = [dataset_dict["start_token_idx"], dataset_dict["end_token_idx"]]
     return x, y
 
@@ -171,7 +171,6 @@ optimizer_grouped_parameters = [
 
 optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimizer_grouped_parameters)
 
-
 # model.load_state_dict(torch.load("./weights_4.pth"))
 
 for epoch in range(1, epochs + 1):
@@ -197,6 +196,7 @@ for epoch in range(1, epochs + 1):
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
     print("\nTraining loss: {.4f}".format(tr_loss / nb_tr_steps))
+    training_pbar.close()
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
     validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True)
@@ -235,8 +235,8 @@ for epoch in range(1, epochs + 1):
                 count += 1
         validation_pbar.update(input_word_ids.size(0))
     acc = count / len(y_eval[0])
-    print(f"\nEpoch={epoch + 1}, exact match score={acc:.2f}")
-
+    print(f"\nEpoch={epoch}, exact match score={acc:.2f}")
+    validation_pbar.close()
 
 # ============================================ TESTING =================================================================
 data = {"data":
