@@ -143,7 +143,6 @@ eval_squad_examples = create_squad_examples(raw_eval_data)
 x_eval, y_eval = create_inputs_targets(eval_squad_examples)
 print(f"{len(eval_squad_examples)} evaluation points created.")
 
-
 train_data = TensorDataset(torch.tensor(x_train[0], dtype=torch.int64),
                            torch.tensor(x_train[1], dtype=torch.float),
                            torch.tensor(x_train[2], dtype=torch.int64),
@@ -198,9 +197,7 @@ for epoch in range(1, epochs + 1):
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
     print("\nTraining loss: {.4f}".format(tr_loss / nb_tr_steps))
-
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
-
     # ============================================ VALIDATION ==========================================================
     validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True)
     model.eval()
