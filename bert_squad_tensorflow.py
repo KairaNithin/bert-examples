@@ -8,7 +8,7 @@ import tensorflow_hub as hub
 from tensorflow import keras
 from tensorflow.keras import layers
 from tokenizers import BertWordPieceTokenizer
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 # ============================================= PREPARING DATASET ======================================================
