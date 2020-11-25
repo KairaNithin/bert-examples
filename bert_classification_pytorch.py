@@ -143,7 +143,7 @@ for epoch in range(1, epochs + 1):
                            token_type_ids=input_type_ids)
 
         logits = logits.detach().cpu().numpy()
-        label_ids = labels.to('cpu').numpy()
+        label_ids = labels.cpu().numpy()
         tmp_eval_accuracy = flat_accuracy(logits, label_ids)
         eval_accuracy += tmp_eval_accuracy
         nb_eval_steps += 1
