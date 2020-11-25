@@ -13,5 +13,5 @@
 ### Pretrained Hugging Face BERT model
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/bert_large_pretrained_example.png" width="900"/>  
 
-### Fine-Tuning BERT For SQuAD 1.1 Task Using PyTorch 1.7 & ASUS 3090 STRIX OC    
+### Fine-Tuning BERT For SQuAD 1.1 Task Using PyTorch 1.7 & ASUS 3090 TUF OC    
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/bert_torch_3090_strix_oc.png" width="900"/>  
