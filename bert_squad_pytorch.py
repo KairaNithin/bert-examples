@@ -195,8 +195,8 @@ for epoch in range(1, epochs + 1):
         nb_tr_examples += input_word_ids.size(0)
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
-    print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     training_pbar.close()
+    print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
     validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True)
@@ -235,8 +235,8 @@ for epoch in range(1, epochs + 1):
                 count += 1
         validation_pbar.update(input_word_ids.size(0))
     acc = count / len(y_eval[0])
-    print(f"\nEpoch={epoch}, exact match score={acc:.2f}")
     validation_pbar.close()
+    print(f"\nEpoch={epoch}, exact match score={acc:.2f}")
 
 # ============================================ TESTING =================================================================
 data = {"data":

@@ -5,17 +5,16 @@ from torch.utils.data import RandomSampler, DataLoader, SequentialSampler, Tenso
 from tqdm import tqdm
 from transformers import BertTokenizer, BertForSequenceClassification
 
-max_seq_length = 128
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-
+epochs = 4
 batch_size = 16
-epochs = 10
+max_seq_length = 128
 gpu = torch.device('cuda')
 train_data = load_dataset('glue', 'mrpc', split='train')
 eval_data = load_dataset('glue', 'mrpc', split='validation')
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
 
-def _truncate_seq_pair(tokens_a, tokens_b, max_length):
+def truncate_seq_pair(tokens_a, tokens_b, max_length):
     while True:
         total_length = len(tokens_a) + len(tokens_b)
         if total_length <= max_length:
@@ -32,10 +31,11 @@ def convert_examples_to_features(examples):
     input_type_ids = []
     input_masks = []
     for (ex_index, example) in enumerate(examples):
-        labels.append(example["label"])
+        if "label" in example:
+            labels.append(example["label"])
         tokens_a = tokenizer.tokenize(example["sentence1"])
         tokens_b = tokenizer.tokenize(example["sentence2"])
-        _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
+        truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
         tokens = []
         segment_ids = []
         tokens.append("[CLS]")
@@ -59,26 +59,17 @@ def convert_examples_to_features(examples):
         input_word_ids.append(input_ids)
         input_type_ids.append(segment_ids)
         input_masks.append(input_mask)
-    return torch.tensor(input_word_ids, dtype=torch.int64), \
-           torch.tensor(input_masks, dtype=torch.float), \
-           torch.tensor(input_type_ids, dtype=torch.int64), \
-           torch.tensor(labels, dtype=torch.int64)
+    return [torch.tensor(input_word_ids, dtype=torch.int64),
+            torch.tensor(input_masks, dtype=torch.float),
+            torch.tensor(input_type_ids, dtype=torch.int64),
+            torch.tensor(labels, dtype=torch.int64)]
 
 
-input_word_ids_train, input_masks_train, input_type_ids_train, labels_train = convert_examples_to_features(train_data)
-input_word_ids_val, input_masks_val, input_type_ids_val, labels_val = convert_examples_to_features(eval_data)
-
-train_data = TensorDataset(input_word_ids_train,
-                           input_masks_train,
-                           input_type_ids_train,
-                           labels_train)
+train_data = TensorDataset(*convert_examples_to_features(train_data))
 train_sampler = RandomSampler(train_data)
 train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
 
-eval_data = TensorDataset(input_word_ids_val,
-                          input_masks_val,
-                          input_type_ids_val,
-                          labels_val)
+eval_data = TensorDataset(*convert_examples_to_features(eval_data))
 eval_sampler = SequentialSampler(eval_data)
 validation_data_loader = DataLoader(eval_data, sampler=eval_sampler, batch_size=batch_size)
 
@@ -94,21 +85,13 @@ optimizer_grouped_parameters = [
 ]
 
 optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimizer_grouped_parameters)
-
-
 # model.load_state_dict(torch.load("./weights_4.pth"))
-
-
-def flat_accuracy(preds, labels):
-    pred_flat = np.argmax(preds, axis=1).flatten()
-    labels_flat = labels.flatten()
-    return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
 
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=input_word_ids_train.size()[0], position=0, leave=True)
+    training_pbar = tqdm(total=len(train_data), position=0, leave=True)
     model.train()
     tr_loss = 0
     nb_tr_examples, nb_tr_steps = 0, 0
@@ -126,11 +109,11 @@ for epoch in range(1, epochs + 1):
         nb_tr_examples += input_word_ids.size(0)
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
-    print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     training_pbar.close()
+    print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=input_word_ids_val.size()[0], position=0, leave=True)
+    validation_pbar = tqdm(total=len(eval_data), position=0, leave=True)
     model.eval()
     eval_loss, eval_accuracy = 0, 0
     nb_eval_steps, nb_eval_examples = 0, 0
@@ -142,13 +125,30 @@ for epoch in range(1, epochs + 1):
                            attention_mask=input_mask,
                            token_type_ids=input_type_ids)
 
-        logits = logits.detach().cpu().numpy()
+        logits = logits[0].detach().cpu().numpy()
         label_ids = labels.cpu().numpy()
-        tmp_eval_accuracy = flat_accuracy(logits, label_ids)
-        eval_accuracy += tmp_eval_accuracy
+        pred_flat = np.argmax(logits, axis=1).flatten()
+        labels_flat = label_ids.flatten()
+        eval_accuracy += np.sum(pred_flat == labels_flat) / len(labels_flat)
         nb_eval_steps += 1
         validation_pbar.update(input_word_ids.size(0))
     validation_pbar.close()
     print("Validation Accuracy: {}".format(eval_accuracy / nb_eval_steps))
 
 # ============================================ TESTING =================================================================
+model.eval()
+input_word_ids_test, input_masks_test, input_type_ids_test, _ = convert_examples_to_features(
+    [{
+        'sentence1': 'The rain in Spain falls mainly on the plain.',
+        'sentence2': 'It mostly rains on the flat lands of Spain.'
+    }, {
+        'sentence1': 'Look I fine tuned BERT.',
+        'sentence2': 'Is it working? This does not match.'
+    }])
+result = model(input_ids=input_word_ids_test.to(gpu),
+               attention_mask=input_masks_test.to(gpu),
+               token_type_ids=input_type_ids_test.to(gpu))
+result = result[0].detach().cpu()
+print(result.numpy())
+result = torch.argmax(result, dim=1).numpy()
+print(result)
