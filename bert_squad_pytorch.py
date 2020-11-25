@@ -175,9 +175,9 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
+    print("Training epoch ", str(epoch))
     training_pbar = tqdm(total=len(train_squad_examples), position=0, leave=True)
     model.train()
-    print("Training epoch ", str(epoch))
     tr_loss = 0
     nb_tr_examples, nb_tr_steps = 0, 0
     for step, batch in enumerate(train_data_loader):
@@ -195,7 +195,7 @@ for epoch in range(1, epochs + 1):
         nb_tr_examples += input_word_ids.size(0)
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
-    print("\nTraining loss: {.4f}".format(tr_loss / nb_tr_steps))
+    print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     training_pbar.close()
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
