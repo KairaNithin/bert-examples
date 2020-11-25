@@ -10,5 +10,8 @@
 ### Training and validation results
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/squad_results.png" width="900"/>  
 
-### Pretrained Hugging Face BERT model
+### [Pretrained Hugging Face BERT model](https://github.com/dredwardhyde/bert-examples/blob/main/bert_large_squad_pretrained_pytorch.py)
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/bert_large_pretrained_example.png" width="900"/>  
+
+### Fine-Tuning BERT For SQuAD 1.1 Task Using PyTorch 1.7 & ASUS 3090 TUF OC    
+<img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/bert_torch_3090_strix_oc.png" width="900"/>  
