@@ -179,7 +179,7 @@ for epoch in range(1, epochs + 1):
     training_pbar = tqdm(total=len(train_squad_examples), position=0, leave=True)
     model.train()
     tr_loss = 0
-    nb_tr_examples, nb_tr_steps = 0, 0
+    nb_tr_steps = 0
     for step, batch in enumerate(train_data_loader):
         batch = tuple(t.to(gpu) for t in batch)
         input_word_ids, input_mask, input_type_ids, start_token_idx, end_token_idx = batch
@@ -192,7 +192,6 @@ for epoch in range(1, epochs + 1):
         loss.backward()
         optimizer.step()
         tr_loss += loss.item()
-        nb_tr_examples += input_word_ids.size(0)
         nb_tr_steps += 1
         training_pbar.update(input_word_ids.size(0))
     training_pbar.close()
@@ -201,8 +200,6 @@ for epoch in range(1, epochs + 1):
     # ============================================ VALIDATION ==========================================================
     validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True)
     model.eval()
-    eval_loss, eval_accuracy = 0, 0
-    nb_eval_steps, nb_eval_examples = 0, 0
     eval_examples_no_skip = [_ for _ in eval_squad_examples if _.skip is False]
     currentIdx = 0
     count = 0
