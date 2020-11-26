@@ -7,7 +7,7 @@
 
 ### [PyTorch](https://github.com/dredwardhyde/bert-examples/blob/main/bert_classification_pytorch.py)  
 ### Training and validation results 
-<img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/pytorch_classification_results.png" width="900"/>  
+<img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/pytorch_classification_results.png" width="700"/>  
 
 ## Question Answering (SQuAD1.1)
 ### [TensorFlow](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_tensorflow.py)  
@@ -16,7 +16,7 @@
 
 ### [PyTorch](https://github.com/dredwardhyde/bert-examples/blob/main/bert_squad_pytorch.py)  
 ### Training and validation results   
-<img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/pytorch_squad_results.png" width="900"/>  
+<img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/pytorch_squad_results.png" width="600"/>  
 
 ### [Pretrained Hugging Face BERT model](https://github.com/dredwardhyde/bert-examples/blob/main/bert_large_squad_pretrained_pytorch.py)  
 <img src="https://raw.githubusercontent.com/dredwardhyde/bert-examples/main/bert_large_pretrained_example.png" width="900"/>  
