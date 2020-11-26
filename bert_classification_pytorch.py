@@ -147,18 +147,21 @@ for epoch in range(1, epochs + 1):
 
 # ============================================ TESTING =================================================================
 model.eval()
-input_word_ids_test, input_masks_test, input_type_ids_test, _ = convert_examples_to_features(
-    [{
+test_data = [{
         'sentence1': 'The rain in Spain falls mainly on the plain.',
         'sentence2': 'It mostly rains on the flat lands of Spain.'
     }, {
         'sentence1': 'Look I fine tuned BERT.',
         'sentence2': 'Is it working? This does not match.'
-    }], "Creating test samples")
+    }]
+input_word_ids_test, input_masks_test, input_type_ids_test, _ = convert_examples_to_features(test_data,
+                                                                                             "Creating test samples")
 result = model(input_ids=input_word_ids_test.to(gpu),
                attention_mask=input_masks_test.to(gpu),
                token_type_ids=input_type_ids_test.to(gpu))
 result = result[0].detach().cpu()
 print(result.numpy())
 result = torch.argmax(result, dim=1).numpy()
+print(test_data[0])
+print(test_data[1])
 print(result)
