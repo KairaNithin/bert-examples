@@ -145,24 +145,22 @@ def normalize_text(text):
 
 train_squad_examples = create_squad_examples(raw_train_data, "Creating training points")
 x_train, y_train = create_inputs_targets(train_squad_examples)
-print(f"{len(train_squad_examples)} training points created.")
 eval_squad_examples = create_squad_examples(raw_eval_data, "Creating evaluation points")
 x_eval, y_eval = create_inputs_targets(eval_squad_examples)
-print(f"{len(eval_squad_examples)} evaluation points created.")
-
 train_data = TensorDataset(torch.tensor(x_train[0], dtype=torch.int64),
                            torch.tensor(x_train[1], dtype=torch.float),
                            torch.tensor(x_train[2], dtype=torch.int64),
                            torch.tensor(y_train[0], dtype=torch.int64),
                            torch.tensor(y_train[1], dtype=torch.int64))
+print(f"{len(train_data)} training points created.")
 train_sampler = RandomSampler(train_data)
 train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
-
 eval_data = TensorDataset(torch.tensor(x_eval[0], dtype=torch.int64),
                           torch.tensor(x_eval[1], dtype=torch.float),
                           torch.tensor(x_eval[2], dtype=torch.int64),
                           torch.tensor(y_eval[0], dtype=torch.int64),
                           torch.tensor(y_eval[1], dtype=torch.int64))
+print(f"{len(eval_data)} evaluation points created.")
 eval_sampler = SequentialSampler(eval_data)
 validation_data_loader = DataLoader(eval_data, sampler=eval_sampler, batch_size=batch_size)
 # ================================================ TRAINING MODEL ======================================================
@@ -183,7 +181,7 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=len(train_squad_examples),
+    training_pbar = tqdm(total=len(train_data),
                          position=0, leave=True,
                          file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET))
     model.train()
@@ -207,7 +205,7 @@ for epoch in range(1, epochs + 1):
     print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=len(eval_squad_examples),
+    validation_pbar = tqdm(total=len(eval_data),
                            position=0, leave=True,
                            file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
     model.eval()
