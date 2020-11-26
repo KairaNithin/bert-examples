@@ -296,7 +296,7 @@ data = {"data":
                  ]}]}]}
 
 model.eval()
-test_samples = create_squad_examples(data)
+test_samples = create_squad_examples(data, "Creating test points")
 x_test, _ = create_inputs_targets(test_samples)
 pred_start, pred_end = model(torch.tensor(x_test[0], dtype=torch.int64, device=gpu),
                              torch.tensor(x_test[1], dtype=torch.float, device=gpu),
