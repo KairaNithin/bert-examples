@@ -5,13 +5,15 @@ from torch.utils.data import RandomSampler, DataLoader, SequentialSampler, Tenso
 from tqdm import tqdm
 from transformers import BertTokenizer, BertForSequenceClassification
 
+gpu = torch.device('cuda')
+# ============================================= DOWNLOADING DATA =======================================================
 epochs = 4
 batch_size = 16
 max_seq_length = 128
-gpu = torch.device('cuda')
 train_data = load_dataset('glue', 'mrpc', split='train')
 eval_data = load_dataset('glue', 'mrpc', split='validation')
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+# ============================================= PREPARING DATASET ======================================================
 
 
 def truncate_seq_pair(tokens_a, tokens_b, max_length):
@@ -72,7 +74,6 @@ train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=bat
 eval_data = TensorDataset(*convert_examples_to_features(eval_data))
 eval_sampler = SequentialSampler(eval_data)
 validation_data_loader = DataLoader(eval_data, sampler=eval_sampler, batch_size=batch_size)
-
 # ================================================ TRAINING MODEL ======================================================
 model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2).to(device=gpu)
 param_optimizer = list(model.named_parameters())
@@ -86,7 +87,6 @@ optimizer_grouped_parameters = [
 
 optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimizer_grouped_parameters)
 # model.load_state_dict(torch.load("./weights_4.pth"))
-
 
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
@@ -115,7 +115,7 @@ for epoch in range(1, epochs + 1):
     validation_pbar = tqdm(total=len(eval_data), position=0, leave=True)
     model.eval()
     eval_accuracy = 0
-    nb_eval_steps, nb_eval_examples = 0, 0
+    nb_eval_steps = 0
     for batch in validation_data_loader:
         batch = tuple(t.to(gpu) for t in batch)
         input_word_ids, input_mask, input_type_ids, labels = batch
