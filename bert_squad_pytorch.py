@@ -6,6 +6,7 @@ import sys
 import requests
 import string
 import numpy as np
+from colorama import Fore
 from tokenizers import BertWordPieceTokenizer
 from tqdm import tqdm
 from transformers import BertTokenizer, BertForQuestionAnswering
@@ -177,7 +178,9 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=len(train_squad_examples), position=0, leave=True, file=sys.stdout)
+    training_pbar = tqdm(total=len(train_squad_examples),
+                         position=0, leave=True,
+                         file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET))
     model.train()
     tr_loss = 0
     nb_tr_steps = 0
@@ -199,7 +202,9 @@ for epoch in range(1, epochs + 1):
     print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True, file=sys.stdout)
+    validation_pbar = tqdm(total=len(eval_squad_examples),
+                           position=0, leave=True,
+                           file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
     model.eval()
     eval_examples_no_skip = [_ for _ in eval_squad_examples if _.skip is False]
     currentIdx = 0

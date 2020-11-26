@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils.data import RandomSampler, DataLoader, SequentialSampler, TensorDataset
 from tqdm import tqdm
 from transformers import BertTokenizer, BertForSequenceClassification
+from colorama import Fore
 
 gpu = torch.device('cuda')
 # ============================================= DOWNLOADING DATA =======================================================
@@ -92,7 +93,9 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=len(train_data), position=0, leave=True, file=sys.stdout)
+    training_pbar = tqdm(total=len(train_data),
+                         position=0, leave=True,
+                         file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET))
     model.train()
     tr_loss = 0
     nb_tr_steps = 0
@@ -113,7 +116,9 @@ for epoch in range(1, epochs + 1):
     print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=len(eval_data), position=0, leave=True, file=sys.stdout)
+    validation_pbar = tqdm(total=len(eval_data),
+                           position=0, leave=True,
+                           file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
     model.eval()
     eval_accuracy = 0
     nb_eval_steps = 0
