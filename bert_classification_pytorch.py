@@ -29,7 +29,10 @@ def truncate_seq_pair(tokens_a, tokens_b, max_length):
             tokens_b.pop()
 
 
-def convert_examples_to_features(examples):
+def convert_examples_to_features(examples, desc):
+    p_bar = tqdm(total=len(examples), desc=desc,
+                 position=0, leave=True,
+                 file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
     labels = []
     input_word_ids = []
     input_type_ids = []
@@ -63,17 +66,19 @@ def convert_examples_to_features(examples):
         input_word_ids.append(input_ids)
         input_type_ids.append(segment_ids)
         input_masks.append(input_mask)
+        p_bar.update(1)
+    p_bar.close()
     return [torch.tensor(input_word_ids, dtype=torch.int64),
             torch.tensor(input_masks, dtype=torch.float),
             torch.tensor(input_type_ids, dtype=torch.int64),
             torch.tensor(labels, dtype=torch.int64)]
 
 
-train_data = TensorDataset(*convert_examples_to_features(train_data))
+train_data = TensorDataset(*convert_examples_to_features(train_data, "Creating training samples"))
 train_sampler = RandomSampler(train_data)
 train_data_loader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
 
-eval_data = TensorDataset(*convert_examples_to_features(eval_data))
+eval_data = TensorDataset(*convert_examples_to_features(eval_data, "Creating evaluation samples"))
 eval_sampler = SequentialSampler(eval_data)
 validation_data_loader = DataLoader(eval_data, sampler=eval_sampler, batch_size=batch_size)
 # ================================================ TRAINING MODEL ======================================================

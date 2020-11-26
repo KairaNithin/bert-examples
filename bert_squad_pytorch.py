@@ -91,7 +91,10 @@ class Sample:
         self.context_token_to_char = tokenized_context.offsets
 
 
-def create_squad_examples(raw_data):
+def create_squad_examples(raw_data, desc):
+    p_bar = tqdm(total=len(raw_data["data"]), desc=desc,
+                 position=0, leave=True,
+                 file=sys.stdout, bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
     squad_examples = []
     for item in raw_data["data"]:
         for para in item["paragraphs"]:
@@ -107,6 +110,8 @@ def create_squad_examples(raw_data):
                     squad_eg = Sample(question, context)
                 squad_eg.preprocess()
                 squad_examples.append(squad_eg)
+        p_bar.update(1)
+    p_bar.close()
     return squad_examples
 
 
@@ -138,10 +143,10 @@ def normalize_text(text):
     return text
 
 
-train_squad_examples = create_squad_examples(raw_train_data)
+train_squad_examples = create_squad_examples(raw_train_data, "Creating training points")
 x_train, y_train = create_inputs_targets(train_squad_examples)
 print(f"{len(train_squad_examples)} training points created.")
-eval_squad_examples = create_squad_examples(raw_eval_data)
+eval_squad_examples = create_squad_examples(raw_eval_data, "Creating evaluation points")
 x_eval, y_eval = create_inputs_targets(eval_squad_examples)
 print(f"{len(eval_squad_examples)} evaluation points created.")
 
