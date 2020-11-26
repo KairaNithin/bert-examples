@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 
 import requests
 import string
@@ -176,7 +177,7 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=len(train_squad_examples), position=0, leave=True)
+    training_pbar = tqdm(total=len(train_squad_examples), position=0, leave=True, file=sys.stdout)
     model.train()
     tr_loss = 0
     nb_tr_steps = 0
@@ -198,7 +199,7 @@ for epoch in range(1, epochs + 1):
     print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True)
+    validation_pbar = tqdm(total=len(eval_squad_examples), position=0, leave=True, file=sys.stdout)
     model.eval()
     eval_examples_no_skip = [_ for _ in eval_squad_examples if _.skip is False]
     currentIdx = 0

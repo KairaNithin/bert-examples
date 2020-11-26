@@ -1,3 +1,4 @@
+import sys
 import torch
 from datasets import load_dataset
 import numpy as np
@@ -91,7 +92,7 @@ optimizer = torch.optim.Adam(lr=1e-5, betas=(0.9, 0.98), eps=1e-9, params=optimi
 for epoch in range(1, epochs + 1):
     # ============================================ TRAINING ============================================================
     print("Training epoch ", str(epoch))
-    training_pbar = tqdm(total=len(train_data), position=0, leave=True)
+    training_pbar = tqdm(total=len(train_data), position=0, leave=True, file=sys.stdout)
     model.train()
     tr_loss = 0
     nb_tr_steps = 0
@@ -112,7 +113,7 @@ for epoch in range(1, epochs + 1):
     print(f"\nTraining loss={tr_loss / nb_tr_steps:.4f}")
     torch.save(model.state_dict(), "./weights_" + str(epoch) + ".pth")
     # ============================================ VALIDATION ==========================================================
-    validation_pbar = tqdm(total=len(eval_data), position=0, leave=True)
+    validation_pbar = tqdm(total=len(eval_data), position=0, leave=True, file=sys.stdout)
     model.eval()
     eval_accuracy = 0
     nb_eval_steps = 0
